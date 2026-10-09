@@ -1,0 +1,12 @@
+# Public repository: keep survey data, results and result-bearing scripts out of git (user decision).
+csr_analysis/raw/
+csr_analysis/clean/
+csr_analysis/output/
+csr_analysis/literature/
+# Analysis scripts whose write-up templates state findings in words
+csr_analysis/scripts/04a_primary.R
+csr_analysis/scripts/04b_so1.R
+csr_analysis/scripts/04c_impact.R
+csr_analysis/scripts/04d_roadmap.R
+__pycache__/
+*.Rhistory
