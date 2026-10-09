@@ -118,7 +118,7 @@ theme_pub <- function(base = 9) {
           plot.subtitle = element_text(colour = PAL$ink2, size = rel(0.92), hjust = 0, margin = margin(b = 6)),
           plot.caption = element_text(colour = PAL$muted, size = rel(0.78), hjust = 0, margin = margin(t = 6)),
           plot.title.position = "plot", plot.caption.position = "plot",
-          panel.grid.major = element_line(colour = PAL$grid, linewidth = 0.3), panel.grid.minor = element_blank(),
+          panel.grid.major = element_line(colour = PAL$grid, linewidth = 0.3, inherit.blank = TRUE), panel.grid.minor = element_blank(),
           axis.line = element_blank(), axis.ticks = element_blank(),
           legend.position = "top", legend.justification = "left", legend.location = "plot", legend.title = element_blank(),
           legend.text = element_text(size = rel(0.9), colour = PAL$ink2), legend.key.size = unit(9, "pt"),
@@ -128,10 +128,24 @@ theme_pub <- function(base = 9) {
           plot.margin = margin(8, 16, 6, 8)) +
     theme(axis.ticks = element_blank(), axis.ticks.length = unit(0, "pt"))
 }
+# Final table numbers (order of the results file); "Table <id>" references in text and figures are rewritten to these.
+# Only references preceded by "Table"/"Tables" are touched, because project IDs (P01-P08) share the same pattern.
+TNUM <- setNames(1:51, c(sprintf("P%02d", 1:15), sprintf("S%02d", 1:8), sprintf("B%02d", 1:8), "V01", "V02", "V02b",
+                         sprintf("V%02d", 3:8), "R01", sprintf("A%02d", 1:10)))
+retab <- function(x) {
+  if (is.null(x) || !is.character(x)) return(x)
+  rx <- "Tables? [PSBVRA][0-9]{2}b?((-| and |, )[PSBVRA][0-9]{2}b?)*"
+  m <- gregexpr(rx, x, perl = TRUE)
+  regmatches(x, m) <- lapply(regmatches(x, m), function(v) vapply(v, function(s) {
+    ids <- regmatches(s, gregexpr("[PSBVRA][0-9]{2}b?", s))[[1]]; stopifnot(all(ids %in% names(TNUM)))
+    for (i in ids) s <- sub(i, TNUM[[i]], s, fixed = TRUE); s }, ""))
+  x
+}
 save_fig <- function(p, file, w = 7, h = 4.5) {
   # R 4.6.1's own Cairo devices (the R 4.5-built ragg device is not graphics-API compatible with R 4.6).
   png <- file.path(OUT, "figures", paste0(file, ".png")); pdf <- file.path(OUT, "figures", paste0(file, ".pdf"))
   if (inherits(p, "ggplot")) {  # wrap long subtitles/captions to the figure width so nothing is clipped
+    for (k in c("title", "subtitle", "caption")) if (!is.null(p$labels[[k]])) p$labels[[k]] <- retab(p$labels[[k]])
     if (!is.null(p$labels$subtitle)) p$labels$subtitle <- str_wrap(gsub("\n", " ", p$labels$subtitle), floor(w * 13.5))
     if (!is.null(p$labels$caption)) p$labels$caption <- str_wrap(gsub("\n", " ", p$labels$caption), floor(w * 16))
     if (!is.null(p$labels$title)) p$labels$title <- str_wrap(p$labels$title, floor(w * 11))
@@ -185,6 +199,7 @@ likert_plot <- function(df, cols, mid = NULL, title = NULL, subtitle = NULL, cap
 REG <- list()
 reg <- function(id, section, title, table, notes = character(), figure = NA, writeup = character(), extra = NULL) {
   stopifnot(length(writeup) == 5 || length(writeup) == 0)
+  title <- retab(title); notes <- retab(notes); writeup <- retab(writeup)
   REG[[id]] <<- list(id = id, section = section, title = title, table = table, notes = notes, figure = figure, writeup = writeup, extra = extra)
   if (is.data.frame(table)) write.csv(table, file.path(OUT, "tables", paste0(id, ".csv")), row.names = FALSE, na = "")
   else for (j in seq_along(table)) write.csv(table[[j]], file.path(OUT, "tables", paste0(id, "_", letters[j], ".csv")), row.names = FALSE, na = "")
